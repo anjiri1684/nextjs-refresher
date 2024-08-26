@@ -1,54 +1,70 @@
-import { Fragment } from "react";
+import { MongoClient, ObjectId } from "mongodb";
+
 import MeetupDetail from "../../components/meetups/MeetupDetail";
+import Head from "next/head";
 
 function MeetupDetails(props) {
   return (
-    <Fragment>
+    <>
+      <Head>
+        <title>{props.meetupData.title}</title>
+        <meta name="description" content={props.meetupData.description} />
+      </Head>
       <MeetupDetail
-        image="https://www.shutterstock.com/shutterstock/photos/1290353884/display_1500/stock-photo-aerial-top-down-photo-of-classic-motorcylce-event-festival-terrain-with-old-bikes-and-mopeds-parked-1290353884.jpg"
-        alt="Our first meetups"
-        title="Our first meetups"
-        address="Our first meetup was held on 2020-01-01"
-        description=" Our first meetup was a huge success! We had a great turnout and everyone
-        had"
+        image={props.meetupData.image}
+        alt={props.meetupData.title}
+        title={props.meetupData.title}
+        address={props.meetupData.address}
+        description={props.meetupData.description}
       />
-    </Fragment>
+    </>
   );
 }
 
-export function getStaticPaths() {
+export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    "mongodb+srv://vincentanjiri12:anjiri1234@cluster0.euinm.mongodb.net/meetups?retryWrites=true&w=majority&appName=Cluster0"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: "m1",
-        },
-      },
-      {
-        params: {
-          meetupId: "m2",
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
   };
 }
 
 export async function getStaticProps(context) {
   const meetupId = context.params.meetupId;
 
-  console.log(meetupId);
+  const client = await MongoClient.connect(
+    "mongodb+srv://vincentanjiri12:anjiri1234@cluster0.euinm.mongodb.net/meetups?retryWrites=true&w=majority&appName=Cluster0"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId),
+  });
+
+  client.close();
 
   return {
     props: {
       meetupData: {
-        image:
-          "https://www.shutterstock.com/shutterstock/photos/1290353884/display_1500/stock-photo-aerial-top-down-photo-of-classic-motorcylce-event-festival-terrain-with-old-bikes-and-mopeds-parked-1290353884.jpg",
-        id: "m1",
-        title: "Our first meetups",
-        address: "Our first meetup was held on 2020-01-01",
-        description:
-          " Our first meetup was a huge success! We had a great turnout and everyone  had",
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        image: selectedMeetup.image,
+        address: selectedMeetup.address,
+        description: selectedMeetup.description,
       },
     },
   };
